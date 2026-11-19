@@ -1,204 +1,353 @@
+<div align="center">
+
 # ⚡ JFlux
 
-<h3 align="center">A Lightweight and Modular Java-Based Reverse Proxy & Backend Traffic Management System</h3>
+**A lightweight, zero-dependency HTTP reverse proxy and load balancer written in pure Java.**
 
-<p align="center">
-  <strong>Smart Traffic Distribution. Reliable Backend Communication.</strong>
-</p>
+Round-robin load balancing · Automatic failover · Response caching · Rate limiting · Live metrics
 
-<p align="center">
-  <a href="README.md">🇬🇧 English</a> · <a href="README_TR.md">🇹🇷 Türkçe</a>
-</p>
+![Java](https://img.shields.io/badge/Java-25-orange?logo=openjdk&logoColor=white)
+![Build](https://img.shields.io/badge/build-Maven-C71A36?logo=apachemaven&logoColor=white)
+![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
+![Concurrency](https://img.shields.io/badge/concurrency-virtual%20threads-blueviolet)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Java-25-orange?style=for-the-badge&logo=openjdk&logoColor=white" />
-  <img src="https://img.shields.io/badge/Maven-Build%20Tool-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" />
-  <img src="https://img.shields.io/badge/Reverse%20Proxy-Architecture-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Load%20Balancing-Round%20Robin-6C63FF?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Cache-Enabled-16A085?style=for-the-badge" />
-</p>
+**🇬🇧 English** · [🇹🇷 Türkçe](README.tr.md)
+
+</div>
 
 ---
 
-## 🚀 Overview
+## Table of Contents
 
-**JFlux** is a lightweight **Reverse Proxy** server application developed from scratch using Java. It receives incoming HTTP requests and distributes them across multiple backend servers.
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+- [Usage & Demo](#usage--demo)
+- [Metrics Endpoint](#metrics-endpoint)
+- [How It Works](#how-it-works)
+- [Project Structure](#project-structure)
+- [Known Limitations](#known-limitations)
+- [Roadmap](#roadmap)
+- [Author](#author)
 
-The project brings together essential backend infrastructure concepts in a modular architecture, including load balancing, response caching, rate limiting, health checks, automatic failover, and real-time performance metrics.
+---
 
-JFlux demonstrates how modern backend systems manage incoming traffic, tolerate server failures, and maintain reliable communication between clients and services.
+## Overview
 
-## ✨ Key Features
+JFlux sits in front of your backend services and distributes incoming HTTP traffic across them. It was built from scratch on top of the Java standard library only — raw `ServerSocket` for the network layer, `java.net.http.HttpClient` for upstream calls, and **virtual threads** (Project Loom) so that every client connection gets its own lightweight thread without the cost of a thread pool.
 
-| Feature | Description |
-| :--- | :--- |
-| 🔀 **Reverse Proxy** | Receives incoming HTTP requests from clients and forwards them to backend servers. |
-| ⚖️ **Load Balancer** | Distributes incoming requests among active servers using the Round-Robin algorithm. |
-| ⚡ **Response Cache** | Stores successful `GET` responses in memory for a configurable TTL period. |
-| 🛡️ **Rate Limiter** | Limits the number of requests per minute based on client IP addresses (`429`). |
-| 💓 **Health Checks** | Periodically checks the availability of backend servers. |
-| 🔄 **Automatic Failover** | Redirects requests to another healthy server when a backend becomes unavailable. |
-| 🔁 **Retry Mechanism** | Provides a configurable retry mechanism for failed requests. |
-| 📊 **Metrics Collector** | Exposes request statistics and backend-specific success rates through `/_jflux/metrics`. |
-| 🧵 **Virtual Threads** | Efficiently handles concurrent client connections using Java Virtual Threads. |
+It is small enough to read in an afternoon (~800 lines), yet covers the core building blocks of a production reverse proxy: load balancing, health checking, failover, caching, rate limiting, and observability.
 
-## 🏗️ System Architecture
+```
+                         ┌──────────────────────────────────────────┐
+                         │                  JFlux                   │
+                         │                                          │
+   Clients ───────────►  │  Rate Limit → Cache → Load Balancer ─────┼──►  Backend :9001
+   (curl, browser,       │      │          │          │   ▲        │──►  Backend :9002
+    services…)           │      ▼          ▼          ▼   │        │──►  Backend :9003
+                         │    429        HIT/MISS   Retry/Failover │
+                         │                          Health Checks   │
+                         └──────────────────────────────────────────┘
+```
 
-JFlux follows a modular architecture in which each component is responsible for a specific stage of the request-processing pipeline.
+## Features
+
+| | Feature | Description |
+|---|---|---|
+| ⚖️ | **Round-robin load balancing** | Requests are spread evenly across all *healthy* backends. |
+| 🩺 | **Active health checks** | A background task probes every backend over TCP at a configurable interval and automatically marks servers `UP` / `DOWN`. |
+| 🔁 | **Passive failover & retries** | If a backend fails mid-request, it is immediately marked `DOWN` and the request is retried on a different backend — the client never notices. |
+| 🗄️ | **In-memory response cache** | Successful `GET` responses (`2xx`) are cached with a configurable TTL. Cached responses are tagged with `X-Proxy-Cache: HIT`. |
+| 🚦 | **Per-client rate limiting** | Fixed-window limiter per client IP. Excess requests receive `429 Too Many Requests`. |
+| 📊 | **Built-in metrics** | A JSON endpoint exposes request counts, cache hit/miss, rate-limited and failed requests, and per-backend traffic. |
+| 🧵 | **Virtual threads** | One virtual thread per connection (`Executors.newVirtualThreadPerTaskExecutor()`) for simple, blocking-style code that still scales. |
+| ⚙️ | **Flexible configuration** | Properties file (external or bundled) with safe built-in defaults. Invalid values never crash the proxy — they fall back to defaults. |
+| 📦 | **Zero dependencies** | Nothing to download beyond the JDK itself. |
+
+## Architecture
+
+### Request lifecycle
 
 ```mermaid
 flowchart TD
-    A[Client] --> B[JFlux Proxy Server]
-    B --> C[Rate Limiter]
-    C --> D[Response Cache]
-    D --> E[Load Balancer]
-    E --> F[Backend Server 1]
-    E --> G[Backend Server 2]
-    E --> H[Backend Server 3]
-    I[Health Checker] --> F
-    I --> G
-    I --> H
-    B --> J[Metrics Collector]
+    C([Client request]) --> RL{Under rate limit?}
+    RL -- No --> R429[/429 Too Many Requests/]
+    RL -- Yes --> P[Parse HTTP request]
+    P -->|malformed| R400[/400 Bad Request/]
+    P --> M{GET /_jflux/metrics?}
+    M -- Yes --> MJ[/200 JSON metrics/]
+    M -- No --> CH{GET and cached?}
+    CH -- Yes --> HIT[/Serve from cache<br/>X-Proxy-Cache: HIT/]
+    CH -- No --> LB[Pick next healthy backend<br/>round-robin]
+    LB --> F{Backend responded?}
+    F -- No, retries left --> MD[Mark backend DOWN] --> LB
+    F -- No, retries exhausted --> R503[/503 Service Unavailable/]
+    F -- Yes --> S[Cache if GET + 2xx] --> MISS[/Respond<br/>X-Proxy-Cache: MISS/]
 ```
 
-### Core Components
+### Components
 
-- **ProxyServer:** Manages the main socket server and incoming connections.
-- **ClientHandler:** Parses client requests and handles caching and backend communication.
-- **LoadBalancer:** Selects a healthy backend server and coordinates health checks.
-- **ResponseCache:** Manages temporary responses using a TTL-based caching mechanism.
-- **RateLimiter:** Controls request frequency on a per-client basis.
-- **MetricsCollector:** Collects application performance metrics.
-- **ProxyConfig:** Loads runtime configuration from `config.properties`.
+| Component | Responsibility |
+|---|---|
+| `ProxyServer` | Accepts TCP connections and hands each one to a virtual thread. Owns the lifecycle of all other components. |
+| `ClientHandler` | Parses the request, applies rate limit → metrics route → cache → forwarding with retry, and writes the response. |
+| `LoadBalancer` | Maintains the backend list, performs round-robin selection over healthy servers, and runs the scheduled TCP health checks. |
+| `ResponseCache` | Thread-safe TTL cache backed by a `ConcurrentHashMap`; entries expire lazily on read. |
+| `RateLimiter` | Thread-safe fixed-window counter per client key (IP address). |
+| `MetricsCollector` | Lock-free counters (`AtomicLong`) rendered as JSON on demand. |
+| `ProxyConfig` | Immutable `record` loaded from `config.properties` with defaulting and validation. |
+| `MockBackendRunner` | Spins up three tiny demo backends on ports `9001–9003` for local testing. |
 
-## 🛠️ Tech Stack
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Java-25-orange?style=flat-square&logo=openjdk&logoColor=white" />
-  <img src="https://img.shields.io/badge/Maven-Build%20Tool-C71A36?style=flat-square&logo=apachemaven&logoColor=white" />
-  <img src="https://img.shields.io/badge/IntelliJ%20IDEA-000000?style=flat-square&logo=intellijidea&logoColor=white" />
-</p>
-
-| Technology | Purpose |
-| :--- | :--- |
-| **Java 25** | Core application development |
-| **Maven** | Project and build management |
-| **Java Sockets** | Listening for and managing client connections |
-| **Java HttpClient** | HTTP communication with backend servers |
-| **Virtual Threads** | Highly concurrent I/O processing |
-| **ConcurrentHashMap** | Thread-safe memory and cache management |
-| **AtomicInteger / AtomicLong** | Lock-free atomic counter operations |
-| **ScheduledExecutorService** | Periodic health check tasks |
-
-## 📂 Project Structure
-
-```text
-JFlux/
-│
-├── src/
-│   └── main/
-│       ├── java/
-│       │   └── com/jflux/
-│       │       ├── balancer/
-│       │       │   └── LoadBalancer.java
-│       │       ├── cache/
-│       │       │   └── ResponseCache.java
-│       │       ├── config/
-│       │       │   └── ProxyConfig.java
-│       │        ├── metrics/
-│       │        │   └── MetricsCollector.java
-│       │        ├── model/
-│       │        │   ├── BackendServer.java
-│       │        │   └── HttpResponseData.java
-│       │        ├── ratelimit/
-│       │        │   └── RateLimiter.java
-│       │        ├── server/
-│       │        │   ├── ClientHandler.java
-│       │        │   └── ProxyServer.java
-│       │        ├── testutil/
-│       │        │   └── MockBackendRunner.java
-│       │        └── Main.java
-│       │
-│       └── resources/
-│           └── config.properties
-│
-├── pom.xml
-├── README.md
-└── README_TR.md
-```
-
-## ⚙️ Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- Java JDK 25
-- Apache Maven
-- IntelliJ IDEA (recommended)
+- **JDK 25** (the version targeted in `pom.xml`)
+- **Apache Maven 3.9+** *(optional — you can also compile with plain `javac`)*
 
-### 1. Clone the Repository
+> 💡 The code only uses features available since Java 21 (records, switch expressions, virtual threads). If you need to run on an older JDK, lower `maven.compiler.source` / `target` in `pom.xml` accordingly.
+
+### 1. Clone & build
 
 ```bash
 git clone https://github.com/mirayyozcann/JFlux.git
 cd JFlux
-```
-
-### 2. Build the Project
-
-```bash
 mvn clean compile
 ```
 
-### 3. Start the Mock Backend Servers
-
-Run the following class from IntelliJ IDEA. It starts mock backend servers on ports `9001`, `9002`, and `9003`.
-
-```text
-com.jflux.testutil.MockBackendRunner
-```
-
-### 4. Start JFlux
-
-Run the main class:
-
-```text
-com.jflux.Main
-```
-
-### 5. Send a Request
+<details>
+<summary>Build without Maven</summary>
 
 ```bash
-curl http://localhost:8080/
+mkdir -p out
+javac -d out $(find src/main/java -name "*.java")
+# run with: java -cp out:src/main/resources com.jflux.Main
 ```
 
-## 📊 Metrics Endpoint
+</details>
 
-```text
-http://localhost:8080/_jflux/metrics
+### 2. Start the demo backends
+
+In a first terminal:
+
+```bash
+java -cp target/classes com.jflux.testutil.MockBackendRunner
 ```
 
-## 🎯 Project Goals
+```
+Mock backend started on http://localhost:9001
+Mock backend started on http://localhost:9002
+Mock backend started on http://localhost:9003
+```
 
-- Gain an in-depth understanding of reverse proxy architecture.
-- Practice load-balancing strategies.
-- Explore concurrent programming with Java Virtual Threads.
-- Manage backend availability and fault-tolerance scenarios.
-- Implement caching and rate-limiting mechanisms.
-- Collect and monitor application metrics.
+### 3. Start JFlux
 
-## 🔮 Future Improvements
+In a second terminal:
 
-- Expand automated unit and integration test coverage.
-- Implement advanced HTTP header forwarding rules.
-- Improve cache eviction policies.
-- Enhance observability and logging.
-- Introduce additional load-balancing algorithms (e.g., **Least Connections**).
+```bash
+java -cp target/classes com.jflux.Main
+```
 
-## 📌 Project Status
+```
+JFlux Reverse Proxy listening on http://localhost:8080
+Backends: [http://localhost:9001, http://localhost:9002, http://localhost:9003]
+Metrics endpoint: http://localhost:8080/_jflux/metrics
+```
 
-JFlux is a backend infrastructure project designed to demonstrate reverse proxy and traffic management concepts. It is open to further development and improvements.
+Stop it at any time with `Ctrl+C` — a shutdown hook stops the health checker and the server cleanly.
 
----
+## Configuration
 
-<p align="center">
-  <strong>⚡ JFlux — Lightweight Proxy. Smarter Traffic Management.</strong>
-</p>
+JFlux reads `config.properties`. Lookup order:
+
+1. `./config.properties` in the **current working directory** (external override — no rebuild needed)
+2. `config.properties` bundled on the **classpath** (`src/main/resources`)
+3. **Built-in defaults**
+
+Missing or unparsable values silently fall back to their defaults.
+
+| Property | Default | Description |
+|---|---|---|
+| `proxy.port` | `8080` | Port the proxy listens on. |
+| `backend.urls` | `http://localhost:9001,http://localhost:9002,http://localhost:9003` | Comma-separated list of backend base URLs. |
+| `cache.ttl.millis` | `10000` | Lifetime of a cached `GET` response in milliseconds. Set to `0` to disable caching. |
+| `ratelimit.max.per.minute` | `30` | Maximum requests per client IP per 60-second window. Set to `0` to disable rate limiting. |
+| `healthcheck.interval.millis` | `5000` | Interval between TCP health checks (connect timeout: 1 s). |
+| `proxy.max.retries` | `3` | Maximum number of backend attempts per request (minimum effective value: `1`). |
+
+**Example** — a production-like profile placed next to the JAR/classes:
+
+```properties
+proxy.port=80
+backend.urls=http://10.0.0.11:8000,http://10.0.0.12:8000
+cache.ttl.millis=30000
+ratelimit.max.per.minute=300
+healthcheck.interval.millis=3000
+proxy.max.retries=2
+```
+
+## Usage & Demo
+
+### Load balancing
+
+Each request lands on the next backend in the rotation:
+
+```bash
+curl -i localhost:8080/hello1
+curl -i localhost:8080/hello2
+curl -i localhost:8080/hello3
+curl -i localhost:8080/hello4
+```
+
+```
+Hello from backend on port 9001 | path=/hello1
+Hello from backend on port 9002 | path=/hello2
+Hello from backend on port 9003 | path=/hello3
+Hello from backend on port 9001 | path=/hello4
+```
+
+### Caching
+
+Repeat the same `GET` within the TTL window and inspect the `X-Proxy-Cache` header:
+
+```bash
+curl -si localhost:8080/hello1 | grep X-Proxy-Cache   # X-Proxy-Cache: MISS
+curl -si localhost:8080/hello1 | grep X-Proxy-Cache   # X-Proxy-Cache: HIT
+```
+
+Proxy log:
+
+```
+[FORWARD] GET /hello1 -> http://localhost:9001 (200, attempts=1)
+[CACHE HIT] GET /hello1
+```
+
+### Failover
+
+1. Stop one of the mock backends (e.g. kill the process on port `9002`, or stop the runner and start only two ports).
+2. Keep sending requests — none of them fail. JFlux detects the dead backend, logs it, and routes around it:
+
+```
+[FAILOVER] Attempt 1 failed on http://localhost:9002 (...), marking DOWN and retrying...
+```
+
+3. When the backend comes back, the next health check marks it `UP` again:
+
+```
+[HEALTH] http://localhost:9002 -> UP
+```
+
+If **every** backend is down, clients receive `503 Service Unavailable`.
+
+### Rate limiting
+
+With the default limit of 30 requests/minute per IP:
+
+```bash
+for i in $(seq 1 35); do curl -s -o /dev/null -w "%{http_code} " localhost:8080/page$i; done
+# 200 200 200 ... 200 429 429 429 429 429
+```
+
+Rate-limited requests are counted in the metrics endpoint and never reach a backend.
+
+## Metrics Endpoint
+
+```bash
+curl localhost:8080/_jflux/metrics
+```
+
+```json
+{
+  "totalRequests": 42,
+  "cacheHits": 9,
+  "cacheMisses": 28,
+  "rateLimited429": 5,
+  "failed503": 0,
+  "backendSuccess": {"http://localhost:9001":10, "http://localhost:9002":9, "http://localhost:9003":9}
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `totalRequests` | Every connection accepted by the proxy (including rate-limited ones). |
+| `cacheHits` | Requests answered directly from the cache. |
+| `cacheMisses` | Requests that had to go to a backend (this includes non-`GET` methods, which are never cached). |
+| `rateLimited429` | Requests rejected by the rate limiter. |
+| `failed503` | Requests for which every backend attempt failed. |
+| `backendSuccess` | Successful responses served per backend — a quick way to verify balance. |
+
+## How It Works
+
+**Load balancing.** `LoadBalancer.nextServer()` filters the backend list down to healthy servers and picks one using an atomic counter and `Math.floorMod`, giving thread-safe round-robin without locks.
+
+**Health checks.** A single-threaded `ScheduledExecutorService` opens a TCP connection to every backend every `healthcheck.interval.millis`. State changes (`UP` ⇄ `DOWN`) are logged.
+
+**Failover.** If forwarding throws an `IOException` (connection refused, timeout, …), the backend is marked `DOWN` immediately — without waiting for the next health check — and the request is retried on a *different* backend, up to `proxy.max.retries` attempts. Upstream timeouts: 2 s to connect, 3 s per request.
+
+**Caching.** Only `GET` requests with a `2xx` response are cached. The key is `METHOD:path` (query string included). Expired entries are evicted lazily when they are next requested. The upstream `Transfer-Encoding` and `Content-Length` headers are dropped from responses, and `Content-Length` is recomputed for the client.
+
+**Rate limiting.** Each client IP gets a counter and a window start time. When 60 seconds have passed the window resets; if the counter reaches the limit, further requests in that window are answered with `429`.
+
+**HTTP handling.** JFlux parses the request line and headers itself, honours `Content-Length` to read request bodies, forwards the method, path and body to the selected backend, and replies with `Connection: close`.
+
+## Project Structure
+
+```
+JFlux/
+├── pom.xml
+└── src/main/
+    ├── resources/
+    │   └── config.properties           # default configuration
+    └── java/com/jflux/
+        ├── Main.java                   # entry point + shutdown hook
+        ├── balancer/
+        │   └── LoadBalancer.java       # round-robin + health checks
+        ├── cache/
+        │   └── ResponseCache.java      # TTL response cache
+        ├── config/
+        │   └── ProxyConfig.java        # configuration record & loader
+        ├── metrics/
+        │   └── MetricsCollector.java   # counters + JSON report
+        ├── model/
+        │   ├── BackendServer.java      # backend URL + health flag
+        │   └── HttpResponseData.java   # status, headers, body
+        ├── ratelimit/
+        │   └── RateLimiter.java        # per-IP fixed-window limiter
+        ├── server/
+        │   ├── ProxyServer.java        # accept loop (virtual threads)
+        │   └── ClientHandler.java      # request pipeline
+        └── testutil/
+            └── MockBackendRunner.java  # demo backends on 9001–9003
+```
+
+## Known Limitations
+
+JFlux is a learning-grade project and intentionally keeps things simple. Worth knowing before you put it in front of real traffic:
+
+- **Request headers are not forwarded** to backends — only the method, path and body are. Headers such as `Host`, `Authorization`, or `Content-Type` do not reach the upstream.
+- **HTTP/1.1 only, no keep-alive** — every connection is closed after one response. No HTTPS/TLS termination, no WebSocket or chunked-request support.
+- **Failover is connection-level.** Backend `5xx` responses are passed through to the client as-is and do not trigger a retry.
+- **Cache has no size limit** and no `Cache-Control` awareness; expired entries are only evicted when requested again.
+- **Rate-limiter state is never purged**, so a very large number of distinct client IPs will grow memory over time. The limiter also keys on the direct peer address (it ignores `X-Forwarded-For`).
+- **Health checks are TCP-level** — a backend that accepts connections but returns errors is still considered `UP`.
+- **Reason phrases** are only mapped for a handful of status codes (200, 201, 400, 404, 429, 502, 503); any other status is sent with the phrase `OK` (the numeric code is always correct).
+
+## Roadmap
+
+- [ ] Forward and sanitise request headers (`Host`, `X-Forwarded-For`, …)
+- [ ] HTTP-level health checks (e.g. `GET /health`)
+- [ ] Weighted round-robin and least-connections strategies
+- [ ] Bounded LRU cache with `Cache-Control` support and periodic eviction
+- [ ] Keep-alive connections and streaming bodies
+- [ ] Unit and integration tests (JUnit 5)
+- [ ] Prometheus-compatible metrics format
+- [ ] Docker image and `docker-compose` demo
+
+
+<div align="center">
+
+If you find JFlux useful or interesting, consider giving it a ⭐
+
+</div>
