@@ -1,49 +1,69 @@
-<h1 align="center">⚡ JFlux</h1>
+⚡ JFlux
 
 <h3 align="center">Hafif ve Modüler Java Tabanlı Reverse Proxy & Backend Trafik Yönetim Sistemi</h3>
+
 <p align="center">
   <strong>Akıllı Trafik Dağıtımı. Güvenilir Backend İletişimi.</strong>
 </p>
-<p align="center">
-  <a href="README.md">🇬🇧 English</a> · <a href="README_TR.md">🇹🇷 Türkçe</a>
-</p>
-<p align="center">
-  <img src="https://img.shields.io/badge/Java-25-orange?style=for-the-badge&logo=openjdk&logoColor=white" />
-  <img src="https://img.shields.io/badge/Maven-Build%20Tool-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" />
-  <img src="https://img.shields.io/badge/Reverse%20Proxy-Architecture-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Load%20Balancing-Round%20Robin-6C63FF?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Cache-Enabled-16A085?style=for-the-badge" />
-</p>
 
----
+<p align="center">   <a href="README.md">🇬🇧 English</a> ·   <a href="README_TR.md">🇹🇷 Türkçe</a> </p>
 
-## 🚀 Genel Bakış
+<p align="center">   <img src="https://img.shields.io/badge/Java-25-orange?style=for-the-badge&logo=openjdk&logoColor=white" />   <img src="https://img.shields.io/badge/Maven-Build%20Tool-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" />   <img src="https://img.shields.io/badge/Reverse%20Proxy-Architecture-blue?style=for-the-badge" />   <img src="https://img.shields.io/badge/Load%20Balancing-Round%20Robin-6C63FF?style=for-the-badge" />   <img src="https://img.shields.io/badge/Cache-Enabled-16A085?style=for-the-badge" /> </p>
 
-**JFlux**, Java kullanılarak sıfırdan geliştirilmiş hafif bir **Reverse Proxy (Ters Proxy)** sunucu uygulamasıdır. Gelen HTTP isteklerini karşılayarak birden fazla arka plan (backend) sunucusuna dağıtır.
+🚀 Genel Bakış
 
-Proje; yük dengeleme (load balancing), yanıt önbellekleme (response caching), hız sınırlama (rate limiting), sunucu sağlık kontrolü (health check), otomatik yedek sunucuya geçiş (failover) ve canlı performans metrikleri gibi temel backend altyapı kavramlarını modüler bir mimaride birleştirir.
+JFlux, Java ile geliştirilmiş hafif bir Reverse Proxy (Ters Proxy) sunucu uygulamasıdır. Gelen HTTP isteklerini karşılayarak birden fazla backend sunucusuna dağıtır.
 
-JFlux, modern backend sistemlerinin gelen trafiği nasıl yönettiğini, sunucu kesintilerini nasıl tolere ettiğini ve istemciler ile servisler arasında güvenilir iletişimi nasıl sürdürdüğünü uygulamalı olarak gösterir.
+Proje; yük dengeleme (load balancing), yanıt önbellekleme (response caching), hız sınırlama (rate limiting), TCP tabanlı sunucu sağlık kontrolleri, bağlantı hatalarında failover ve performans metrikleri gibi temel backend altyapı kavramlarını modüler bir mimaride birleştirir.
 
-## ✨ Öne Çıkan Özellikler
+JFlux, backend sistemlerinde gelen trafiğin nasıl yönlendirildiğini, sunucu bağlantı hatalarının nasıl ele alındığını ve istemciler ile servisler arasındaki iletişimin nasıl yönetildiğini uygulamalı olarak gösterir.
 
-| Özellik | Açıklama |
-| :--- | :--- |
-| 🔀 **Reverse Proxy** | İstemcilerden gelen HTTP isteklerini karşılar ve backend sunucularına iletir. |
-| ⚖️ **Load Balancer** | Gelen istekleri Round-Robin algoritmasıyla aktif sunucular arasında dağıtır. |
-| ⚡ **Response Cache** | Başarılı `GET` yanıtlarını yapılandırılabilir TTL süresi boyunca bellekte tutar. |
-| 🛡️ **Rate Limiter** | İstemci IP adresine göre dakikalık istek sıklığını sınırlandırır (`429`). |
-| 💓 **Health Checks** | Arka plan sunucularının erişilebilirliğini düzenli aralıklarla kontrol eder. |
-| 🔄 **Automatic Failover** | Bir sunucu erişilemez olduğunda isteği sağlıklı diğer sunucuya yönlendirir. |
-| 🔁 **Retry Mechanism** | Başarısız istekler için yapılandırılabilir yeniden deneme mekanizması sunar. |
-| 📊 **Metrics Collector** | İstek istatistiklerini ve sunucu bazlı başarı oranlarını `/_jflux/metrics` üzerinden sunar. |
-| 🧵 **Virtual Threads** | Eşzamanlı istemci bağlantılarını Java Virtual Threads ile hafif şekilde yönetir. |
+✨ Öne Çıkan Özellikler
 
-## 🏗️ Sistem Mimarisi
+Özellik
+
+Açıklama
+
+🔀 Reverse Proxy
+
+İstemcilerden gelen HTTP isteklerini karşılar ve backend sunucularına iletir.
+
+⚖️ Load Balancer
+
+Gelen istekleri Round-Robin algoritmasıyla sağlıklı backend sunucuları arasında dağıtır.
+
+⚡ Response Cache
+
+Başarılı GET yanıtlarını yapılandırılabilir TTL süresi boyunca bellekte saklar.
+
+🛡️ Rate Limiter
+
+İstemci IP adresine göre dakikalık istek sayısını sınırlandırır. Limit aşıldığında HTTP 429 Too Many Requests yanıtı döndürür.
+
+💓 Health Checks
+
+Backend sunucularının TCP bağlantı erişilebilirliğini düzenli aralıklarla kontrol eder.
+
+🔄 Failover
+
+Backend bağlantısı başarısız olduğunda sunucuyu erişilemez olarak işaretler ve başka bir sağlıklı sunucuyu dener.
+
+🔁 Retry Mechanism
+
+Başarısız backend bağlantı denemeleri için yapılandırılabilir yeniden deneme sayısı sunar.
+
+📊 Metrics Collector
+
+İstek, cache, rate limit, hata ve backend başarı sayaçlarını /_jflux/metrics endpoint'i üzerinden JSON olarak sunar.
+
+🧵 Virtual Threads
+
+İstemci bağlantılarını Java Virtual Threads kullanarak eşzamanlı şekilde yönetir.
+
+🏗️ Sistem Mimarisi
 
 JFlux, her bileşenin istek işleme sürecinin belirli bir aşamasından sorumlu olduğu modüler bir mimari izler.
 
-```mermaid
 flowchart TD
     A[İstemci] --> B[JFlux Proxy Server]
     B --> C[Rate Limiter]
@@ -56,19 +76,24 @@ flowchart TD
     I --> G
     I --> H
     B --> J[Metrics Collector]
-```
 
-### Temel Bileşenler
+Temel Bileşenler
 
-* **ProxyServer:** Ana soket sunucusunu ve gelen bağlantıları yönetir.
-* **ClientHandler:** İstemci isteklerini ayrıştırır, önbellek ve backend iletişimini yürütür.
-* **LoadBalancer:** Sağlıklı backend sunucusunu seçer ve sağlık kontrollerini koordine eder.
-* **ResponseCache:** TTL tabanlı geçici yanıt önbelleğini yönetir.
-* **RateLimiter:** İstemci bazlı istek sıklığını kontrol eder.
-* **MetricsCollector:** Uygulama performans sayaçlarını toplar.
-* **ProxyConfig:** `config.properties` üzerinden çalışma zamanı ayarlarını yükler.
+ProxyServer: Ana socket sunucusunu başlatır, gelen bağlantıları kabul eder ve istemci işlemlerini yönetir.
 
-## 🛠️ Teknoloji Yığını
+ClientHandler: İstemci isteklerini ayrıştırır; rate limiting, cache kontrolü ve backend iletişimini yürütür.
+
+LoadBalancer: Sağlıklı backend sunucularını Round-Robin algoritmasıyla seçer ve TCP tabanlı sağlık kontrollerini yürütür.
+
+ResponseCache: Başarılı GET yanıtlarını TTL tabanlı olarak bellekte saklar.
+
+RateLimiter: İstemci IP adresine göre dakikalık istek sıklığını kontrol eder.
+
+MetricsCollector: İstek, cache, rate limit, hata ve backend başarı sayaçlarını toplar.
+
+ProxyConfig: Çalışma zamanı ayarlarını config.properties dosyasından yükler.
+
+🛠️ Teknoloji Yığını
 
 <p align="center">
   <img src="https://img.shields.io/badge/Java-25-orange?style=flat-square&logo=openjdk&logoColor=white" />
@@ -76,20 +101,44 @@ flowchart TD
   <img src="https://img.shields.io/badge/IntelliJ%20IDEA-000000?style=flat-square&logo=intellijidea&logoColor=white" />
 </p>
 
-| Teknoloji | Kullanım Amacı |
-| :--- | :--- |
-| **Java 25** | Ana uygulama geliştirme dili |
-| **Maven** | Proje ve derleme yönetimi |
-| **Java Sockets** | İstemci bağlantılarının dinlenmesi ve yönetimi |
-| **Java HttpClient** | Backend sunucularıyla HTTP iletişimi |
-| **Virtual Threads** | Yüksek eşzamanlılıklı I/O işleme |
-| **ConcurrentHashMap** | Thread-safe bellek ve önbellek yönetimi |
-| **AtomicInteger / AtomicLong** | Kilit gerektirmeyen atomik sayaç işlemleri |
-| **ScheduledExecutorService** | Periyodik sağlık kontrolü görevleri |
+Teknoloji
 
-## 📂 Proje Yapısı
+Kullanım Amacı
 
-```text
+Java 25
+
+Ana uygulama geliştirme dili
+
+Maven
+
+Proje ve derleme yönetimi
+
+Java Sockets
+
+İstemci bağlantılarının dinlenmesi ve yönetimi
+
+Java HttpClient
+
+Backend sunucularıyla HTTP iletişimi
+
+Virtual Threads
+
+Eşzamanlı bağlantıların yönetimi
+
+ConcurrentHashMap
+
+Thread-safe bellek ve önbellek yönetimi
+
+AtomicInteger / AtomicLong
+
+Atomik sayaç ve indeks işlemleri
+
+ScheduledExecutorService
+
+Periyodik backend sağlık kontrolü görevleri
+
+📂 Proje Yapısı
+
 JFlux/
 │
 ├── src/
@@ -122,80 +171,129 @@ JFlux/
 ├── pom.xml
 ├── README.md
 └── README_TR.md
-```
 
-## ⚙️ Kurulum ve Çalıştırma
+⚙️ Kurulum ve Çalıştırma
 
-### Gereksinimler
+Gereksinimler
 
-* Java JDK 25
-* Apache Maven
-* IntelliJ IDEA (önerilir)
+Java JDK 25
 
-### 1. Repoyu Klonlayın
+Apache Maven
 
-```bash
-git clone [https://github.com/mirayyozcann/JFlux.git](https://github.com/mirayyozcann/JFlux.git)
+IntelliJ IDEA (önerilir)
+
+1. Repoyu Klonlayın
+
+git clone https://github.com/mirayyozcann/JFlux.git
 cd JFlux
-```
 
-### 2. Projeyi Derleyin
+2. Projeyi Derleyin
 
-```bash
 mvn clean compile
-```
 
-### 3. Örnek Backend Sunucularını Başlatın
+3. Örnek Backend Sunucularını Başlatın
 
-IntelliJ IDEA üzerinden şu sınıfı çalıştırın (`9001`, `9002`, `9003` portlarını açar):
+IntelliJ IDEA üzerinden aşağıdaki sınıfı çalıştırın. Bu sınıf 9001, 9002 ve 9003 portlarında örnek backend sunucuları başlatır.
 
-```text
 com.jflux.testutil.MockBackendRunner
-```
 
-### 4. JFlux'ı Başlatın
+4. JFlux'ı Başlatın
 
 Ana sınıfı çalıştırın:
 
-```text
 com.jflux.Main
-```
 
-### 5. İstek Gönderin
+JFlux varsayılan olarak 8080 portunda dinlemeye başlar.
 
-```bash
+5. İstek Gönderin
+
 curl http://localhost:8080/
-```
 
-## 📊 Canlı Metrik Uç Noktası
+⚙️ Yapılandırma
 
-```text
+JFlux, config.properties dosyası üzerinden yapılandırılabilir.
+
+Ayar
+
+Varsayılan Değer
+
+Açıklama
+
+proxy.port
+
+8080
+
+Proxy sunucusunun portu
+
+backend.urls
+
+localhost:9001,9002,9003
+
+Backend sunucularının adresleri
+
+cache.ttl.millis
+
+10000
+
+Cache geçerlilik süresi (ms)
+
+ratelimit.max.per.minute
+
+30
+
+IP başına dakikalık istek limiti
+
+healthcheck.interval.millis
+
+5000
+
+TCP sağlık kontrolü aralığı (ms)
+
+proxy.max.retries
+
+3
+
+Maksimum backend deneme sayısı
+
+📊 Metrik Endpoint'i
+
+JFlux, toplanan metrikleri aşağıdaki endpoint üzerinden JSON formatında sunar:
+
 http://localhost:8080/_jflux/metrics
-```
 
-## 🎯 Projenin Amaçları
+Rapor; toplam istek sayısı, cache hit/miss sayıları, rate limit nedeniyle reddedilen istekler, başarısız istekler ve backend başına başarılı istek sayaçlarını içerir.
 
-* Reverse proxy mimarisini derinlemesine anlamak ve uygulamak.
-* Yük dengeleme stratejilerini pratik etmek.
-* Java Virtual Threads ile eşzamanlı programlama deneyimi kazanmak.
-* Backend erişilebilirliğini ve hata toleransı senaryolarını yönetmek.
-* Önbellekleme ve hız sınırlama mekanizmalarını uygulamak.
-* Uygulama metriklerini toplamak ve izlemek.
+🎯 Projenin Amaçları
 
-## 🔮 Gelecek Geliştirmeler
+Reverse proxy mimarisini anlamak ve uygulamak.
 
-* Otomatik birim ve entegrasyon testlerinin genişletilmesi.
-* Gelişmiş HTTP başlık (header) yönlendirme kuralları.
-* Önbellek tahliye (eviction) politikalarının geliştirilmesi.
-* İzlenebilirlik (observability) ve loglama iyileştirmeleri.
-* Farklı yük dengeleme algoritmaları (örneğin *Least Connections*).
+Round-Robin yük dengeleme stratejisini deneyimlemek.
 
-## 📌 Proje Durumu
+Java Virtual Threads ile eşzamanlı programlama pratiği yapmak.
 
-JFlux, reverse proxy ve trafik yönetimi kavramlarını göstermek amacıyla geliştirilmiş bir backend altyapı projesidir ve yeni geliştirmelere açıktır.
+Backend erişilebilirliğini ve bağlantı hatalarını yönetmek.
 
----
+Önbellekleme ve hız sınırlama mekanizmalarını uygulamak.
+
+Uygulama metriklerini toplamak ve izlemek.
+
+🔮 Gelecek Geliştirmeler
+
+Otomatik birim ve entegrasyon testlerinin genişletilmesi.
+
+Gelişmiş HTTP başlık (header) yönlendirme kurallarının eklenmesi.
+
+Önbellek tahliye (eviction) politikalarının geliştirilmesi.
+
+İzlenebilirlik (observability) ve loglama iyileştirmeleri.
+
+Farklı yük dengeleme algoritmalarının eklenmesi (örneğin Least Connections).
+
+📌 Proje Durumu
+
+JFlux, reverse proxy ve backend trafik yönetimi kavramlarını uygulamalı olarak göstermek amacıyla geliştirilmiş bir Java altyapı projesidir. Yeni özellikler ve iyileştirmelerle geliştirilmeye açıktır.
 
 <p align="center">
   <strong>⚡ JFlux — Hafif Proxy. Akıllı Trafik Yönetimi.</strong>
-</p>
+</p></WritingBlock}
+
