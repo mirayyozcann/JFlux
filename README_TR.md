@@ -1,72 +1,58 @@
-# ⚡ JFlux
+<h1 align="center">⚡ JFlux</h1>
 
-Saf Java ile yazılmış, harici bağımlılığı olmayan hafif bir HTTP reverse proxy ve yük dengeleyici.
+<h3 align="center">Hafif ve Modüler Java Tabanlı Reverse Proxy & Backend Trafik Yönetim Sistemi</h3>
+<p align="center">
+  <strong>Akıllı Trafik Dağıtımı. Güvenilir Backend İletişimi.</strong>
+</p>
+<p align="center">
+  <a href="README.md">🇬🇧 English</a> · <a href="README_TR.md">🇹🇷 Türkçe</a>
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/Java-25-orange?style=for-the-badge&logo=openjdk&logoColor=white" />
+  <img src="https://img.shields.io/badge/Maven-Build%20Tool-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" />
+  <img src="https://img.shields.io/badge/Reverse%20Proxy-Architecture-blue?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Load%20Balancing-Round%20Robin-6C63FF?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Cache-Enabled-16A085?style=for-the-badge" />
+</p>
 
-[🇬🇧 English](README.md) · 🇹🇷 Türkçe
+---
 
-## Özellikler
+## 🚀 Genel Bakış
 
-- Sağlıklı sunucular arasında **round-robin yük dengeleme**
-- TCP **sağlık kontrolü** ve yeniden denemeli **otomatik failover**
-- `GET` istekleri için **yanıt önbelleği** (ayarlanabilir TTL)
-- İstemci IP'si başına **istek sınırlama** (`429` döner)
-- `/_jflux/metrics` adresinde **metrik uç noktası**
-- **Sanal thread'ler** üzerine kurulu, yalnızca Java standart kütüphanesi
+**JFlux**, Java ile geliştirilmiş hafif bir **Reverse Proxy (Ters Proxy)** sunucu uygulamasıdır. Gelen HTTP isteklerini karşılayarak birden fazla backend sunucusuna dağıtır.
 
-## Gereksinimler
+Proje; yük dengeleme (load balancing), yanıt önbellekleme (response caching), hız sınırlama (rate limiting), TCP tabanlı sunucu sağlık kontrolleri, bağlantı hatalarında failover ve performans metrikleri gibi temel backend altyapı kavramlarını modüler bir mimaride birleştirir.
 
-- JDK 25
-- Maven
+JFlux, backend sistemlerinde gelen trafiğin nasıl yönlendirildiğini, sunucu bağlantı hatalarının nasıl ele alındığını ve istemciler ile servisler arasındaki iletişimin nasıl yönetildiğini uygulamalı olarak gösterir.
 
-## Hızlı Başlangıç
+## ✨ Öne Çıkan Özellikler
 
-```bash
-git clone https://github.com/mirayyozcann/JFlux.git
-cd JFlux
-mvn clean compile
-```
+| Özellik | Açıklama |
+| :--- | :--- |
+| 🔀 **Reverse Proxy** | İstemcilerden gelen HTTP isteklerini karşılar ve backend sunucularına iletir. |
+| ⚖️ **Load Balancer** | Gelen istekleri Round-Robin algoritmasıyla sağlıklı backend sunucuları arasında dağıtır. |
+| ⚡ **Response Cache** | Başarılı `GET` yanıtlarını yapılandırılabilir TTL süresi boyunca bellekte saklar. |
+| 🛡️ **Rate Limiter** | İstemci IP adresine göre dakikalık istek sayısını sınırlandırır. Limit aşıldığında HTTP `429 Too Many Requests` yanıtı döndürür. |
+| 💓 **Health Checks** | Backend sunucularının TCP bağlantı erişilebilirliğini düzenli aralıklarla kontrol eder. |
+| 🔄 **Failover** | Backend bağlantısı başarısız olduğunda sunucuyu erişilemez olarak işaretler ve başka bir sağlıklı sunucuyu dener. |
+| 🔁 **Retry Mechanism** | Başarısız backend bağlantı denemeleri için yapılandırılabilir yeniden deneme sayısı sunar. |
+| 📊 **Metrics Collector** | İstek, cache, rate limit, hata ve backend başarı sayaçlarını `/_jflux/metrics` endpoint'i üzerinden JSON olarak sunar. |
+| 🧵 **Virtual Threads** | İstemci bağlantılarını Java Virtual Threads kullanarak eşzamanlı şekilde yönetir. |
 
-Bir terminalde demo sunucularını başlatın (9001–9003 portları):
+## 🏗️ Sistem Mimarisi
 
-```bash
-java -cp target/classes com.jflux.testutil.MockBackendRunner
-```
+JFlux, her bileşenin istek işleme sürecinin belirli bir aşamasından sorumlu olduğu modüler bir mimari izler.
 
-Diğer terminalde proxy'yi başlatın:
-
-```bash
-java -cp target/classes com.jflux.Main
-```
-
-Sonra deneyin:
-
-```bash
-curl localhost:8080/hello
-curl localhost:8080/_jflux/metrics
-```
-
-## Yapılandırma
-
-`src/main/resources/config.properties` dosyasını düzenleyin veya çalışma dizinine bir `config.properties` koyarak ayarları ezin.
-
-| Özellik | Varsayılan | Açıklama |
-|---|---|---|
-| `proxy.port` | `8080` | Proxy portu |
-| `backend.urls` | `http://localhost:9001,...9002,...9003` | Virgülle ayrılmış sunucular |
-| `cache.ttl.millis` | `10000` | Önbellek ömrü (`0` kapatır) |
-| `ratelimit.max.per.minute` | `30` | IP başına dakikadaki istek sayısı (`0` kapatır) |
-| `healthcheck.interval.millis` | `5000` | Sağlık kontrolü aralığı |
-| `proxy.max.retries` | `3` | İstek başına en fazla sunucu denemesi |
-
-## Nasıl Çalışır?
-
-İstek → istek sınırı → önbellek → round-robin sunucu seçimi → hata olursa yeniden deneme → yanıt.
-
-- Önbellekten gelen yanıtlarda `X-Proxy-Cache: HIT` (yoksa `MISS`) başlığı bulunur.
-- Bir sunucu hata verirse `DOWN` işaretlenir ve istek başka bir sunucuya gider.
-- Tüm sunucular kapalıysa istemci `503` alır.
-
-## Sınırlamalar
-
-İstek başlıkları arka uca iletilmez, yalnızca keep-alive olmayan HTTP/1.1 desteklenir ve HTTPS yoktur.
-
+```mermaid
+flowchart TD
+    A[İstemci] --> B[JFlux Proxy Server]
+    B --> C[Rate Limiter]
+    C --> D[Response Cache]
+    D --> E[Load Balancer]
+    E --> F[Backend Server 1]
+    E --> G[Backend Server 2]
+    E --> H[Backend Server 3]
+    I[Health Checker] --> F
+    I --> G
+    I --> H
+    B --> J[Metrics Collector]
